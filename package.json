@@ -1,0 +1,49 @@
+{
+  "name": "vramarmor",
+  "version": "1.0.0",
+  "description": "The Open-Source Local AI Model VRAM & GPU Inference Optimizer (CUDA, Apple Silicon & Ollama)",
+  "main": "core/src/index.js",
+  "type": "module",
+  "bin": {
+    "vramarmor": "./core/src/cli/index.js"
+  },
+  "scripts": {
+    "start": "node core/src/cli/index.js",
+    "test": "node test/test_vramarmor.js",
+    "mcp": "node core/src/cli/index.js mcp"
+  },
+  "keywords": [
+    "vram",
+    "gpu",
+    "cuda",
+    "apple-silicon",
+    "ollama",
+    "vllm",
+    "deepseek",
+    "llama3",
+    "inference-optimization",
+    "mcp",
+    "cursor",
+    "claude-desktop",
+    "open-source"
+  ],
+  "author": "Amit Sharma <amitsharma9976@gmail.com> (https://github.com/1nsharma)",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/1nsharma-labs/vramarmor.git"
+  },
+  "funding": [
+    {
+      "type": "individual",
+      "url": "https://polar.sh/1nsharma-labs"
+    },
+    {
+      "type": "upi",
+      "url": "upi://pay?pa=6393741171@upi&pn=Amit%20Sharma"
+    }
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

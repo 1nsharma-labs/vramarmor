@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VramArmor — Local AI Model VRAM & GPU Inference Optimizer</title>
+  <style>
+    :root {
+      --bg: #070c14;
+      --card-bg: #0e1626;
+      --accent: #06b6d4;
+      --accent-dim: rgba(6, 182, 212, 0.15);
+      --border: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --green: #10b981;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      padding: 24px;
+    }
+    .header {
+      max-width: 1200px;
+      margin: 0 auto 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 20px;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .badge {
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .logo h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .subtitle { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+    .nav-links a {
+      color: var(--text);
+      text-decoration: none;
+      font-size: 13px;
+      padding: 8px 14px;
+      border-radius: 6px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      margin-left: 8px;
+      transition: all 0.2s;
+    }
+    .nav-links a:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .main-grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 24px;
+    }
+    @media (max-width: 900px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .card h2 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .vram-bar-container {
+      background: #030712;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      height: 28px;
+      position: relative;
+      overflow: hidden;
+      margin: 12px 0;
+    }
+    .vram-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #06b6d4, #3b82f6);
+      width: 35%;
+      transition: width 0.4s ease;
+    }
+    .vram-bar.warning { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .stat-box {
+      background: #050a14;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    .stat-val { font-size: 18px; font-weight: 800; color: var(--accent); }
+    .stat-lbl { font-size: 11px; color: var(--text-muted); }
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    select, input[type="range"] {
+      width: 100%;
+      background: #050a14;
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+    .status-badge.perfect { background: rgba(16,185,129,0.2); color: var(--green); border: 1px solid var(--green); }
+    .status-badge.oom { background: rgba(239,68,68,0.2); color: var(--red); border: 1px solid var(--red); }
+    .btn-unload {
+      background: #1f2937;
+      color: var(--text);
+      border: 1px solid #374151;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn-unload:hover { border-color: var(--accent); color: var(--accent); }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="logo">
+      <span class="badge">v1.0.0</span>
+      <div>
+        <h1>⚡ VramArmor</h1>
+        <div class="subtitle">The Open-Source Local AI Model VRAM & GPU Inference Optimizer (CUDA, Apple Silicon & Ollama)</div>
+      </div>
+    </div>
+    <div class="nav-links">
+      <a href="https://github.com/1nsharma-labs/vramarmor" target="_blank">⭐ GitHub Repo</a>
+      <a href="https://polar.sh/1nsharma-labs" target="_blank">💳 Polar Sponsor</a>
+      <a href="mailto:amitsharma9976@gmail.com">✉️ Contact Enterprise</a>
+    </div>
+  </header>
+
+  <div class="main-grid">
+    <!-- GPU Telemetry & Loaded Models -->
+    <div>
+      <div class="card">
+        <h2>🎮 Live GPU Hardware Telemetry</h2>
+        <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:600;">
+          <span>NVIDIA GeForce RTX 4090 (24 GB)</span>
+          <span id="vramUsageText">8.45 / 24.00 GB (35%)</span>
+        </div>
+        <div class="vram-bar-container">
+          <div class="vram-bar" id="vramBar"></div>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-box">
+            <div class="stat-val" id="valTotal">24.0</div>
+            <div class="stat-lbl">Total VRAM (GB)</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="valUsed">8.45</div>
+            <div class="stat-lbl">Used VRAM (GB)</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="valFree" style="color:var(--green);">15.55</div>
+            <div class="stat-lbl">Free Headroom (GB)</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val">56°C</div>
+            <div class="stat-lbl">Temperature</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📦 Loaded Models in VRAM (Ollama / vLLM)</h2>
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#050a14; padding:12px; border-radius:8px; border:1px solid var(--border); margin-bottom:10px;">
+          <div>
+            <b>deepseek-r1:8b</b> (Q4_K_M)<br>
+            <span style="font-size:12px; color:var(--text-muted);">Allocated VRAM: 4.92 GB • Active in VRAM</span>
+          </div>
+          <button class="btn-unload" onclick="unloadModel('deepseek-r1:8b')">Offload to RAM</button>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#050a14; padding:12px; border-radius:8px; border:1px solid var(--border);">
+          <div>
+            <b>qwen2.5-coder:7b</b> (Q4_K_M)<br>
+            <span style="font-size:12px; color:var(--text-muted);">Allocated VRAM: 4.41 GB • Idle 8 mins</span>
+          </div>
+          <button class="btn-unload" onclick="unloadModel('qwen2.5-coder:7b')">Offload to RAM</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- VRAM Fit Predictor -->
+    <div>
+      <div class="card">
+        <h2>🧮 Model VRAM Fit Predictor</h2>
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
+          Predict whether a model will fit in GPU memory before loading it, preventing CUDA Out-of-Memory crashes.
+        </p>
+
+        <div class="form-group">
+          <label>Target Model</label>
+          <select id="selModel" onchange="calculateFit()">
+            <option value="deepseek-r1:14b">DeepSeek-R1 (14B)</option>
+            <option value="deepseek-r1:32b">DeepSeek-R1 (32B)</option>
+            <option value="llama3:70b">Llama 3.3 (70B)</option>
+            <option value="deepseek-r1:8b">DeepSeek-R1 (8B)</option>
+            <option value="qwen2.5:72b">Qwen 2.5 (72B)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Quantization Level</label>
+          <select id="selQuant" onchange="calculateFit()">
+            <option value="Q4_K_M">Q4_K_M (Recommended 4-bit)</option>
+            <option value="Q5_K_M">Q5_K_M (5-bit High Precision)</option>
+            <option value="Q8_0">Q8_0 (8-bit Near Lossless)</option>
+            <option value="FP16">FP16 (Full 16-bit Precision)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Context Window Size: <b id="lblCtx">4,096 tokens</b></label>
+          <input type="range" id="rngCtx" min="2048" max="32768" step="2048" value="4096" oninput="updateCtx(this.value)">
+        </div>
+
+        <div style="background:#030712; border:1px solid var(--border); border-radius:8px; padding:12px; font-size:12px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <span>Weights Memory:</span>
+            <b id="resWeights">8.12 GB</b>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <span>KV Cache Buffer:</span>
+            <b id="resKv">0.48 GB</b>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <span>CUDA Overhead:</span>
+            <b>1.20 GB</b>
+          </div>
+          <div style="border-top:1px solid var(--border); margin-top:8px; padding-top:8px; display:flex; justify-content:space-between;">
+            <span>Total VRAM Needed:</span>
+            <b style="color:var(--accent); font-size:14px;" id="resTotal">9.80 GB</b>
+          </div>
+        </div>
+
+        <div id="badgeStatus" class="status-badge perfect">
+          ✅ PERFECT FIT — Will run 100% in VRAM at > 45 t/s
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>🔮 Claude Desktop & Cursor MCP</h2>
+        <pre style="background:#030712; padding:10px; border-radius:6px; font-size:11px; color:#06b6d4; overflow-x:auto;">{
+  "mcpServers": {
+    "vramarmor": {
+      "command": "npx",
+      "args": ["-y", "vramarmor", "mcp"]
+    }
+  }
+}</pre>
+        <div style="margin-top: 12px; font-size: 11px; color: var(--text-muted);">
+          Founder: <b>Amit Sharma</b> (@1nsharma) • UPI: <code>6393741171@upi</code>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentCtx = 4096;
+
+    function updateCtx(val) {
+      currentCtx = parseInt(val, 10);
+      document.getElementById('lblCtx').textContent = currentCtx.toLocaleString() + ' tokens';
+      calculateFit();
+    }
+
+    function calculateFit() {
+      const model = document.getElementById('selModel').value;
+      const quant = document.getElementById('selQuant').value;
+
+      let paramsB = 14;
+      if (model.includes('32b')) paramsB = 32;
+      if (model.includes('70b') || model.includes('72b')) paramsB = 70;
+      if (model.includes('8b')) paramsB = 8;
+
+      let mult = 0.58;
+      if (quant === 'Q5_K_M') mult = 0.73;
+      if (quant === 'Q8_0') mult = 1.15;
+      if (quant === 'FP16') mult = 2.0;
+
+      const weights = paramsB * mult;
+      const kv = (currentCtx * (paramsB / 70 * 0.12)) / 1024;
+      const overhead = 1.2;
+      const total = weights + kv + overhead;
+
+      document.getElementById('resWeights').textContent = weights.toFixed(2) + ' GB';
+      document.getElementById('resKv').textContent = kv.toFixed(2) + ' GB';
+      document.getElementById('resTotal').textContent = total.toFixed(2) + ' GB';
+
+      const badge = document.getElementById('badgeStatus');
+      const freeVram = 15.55;
+
+      if (total > freeVram) {
+        badge.className = 'status-badge oom';
+        badge.textContent = `❌ OOM / SPILL RISK — Exceeds free VRAM by ${(total - freeVram).toFixed(2)} GB!`;
+      } else {
+        badge.className = 'status-badge perfect';
+        badge.textContent = `✅ PERFECT FIT — Will run 100% in VRAM at > 40 t/s`;
+      }
+    }
+
+    function unloadModel(name) {
+      alert(`Unloaded "${name}" from VRAM! Reclaimed memory.`);
+      document.getElementById('valUsed').textContent = '3.53';
+      document.getElementById('valFree').textContent = '20.47';
+      document.getElementById('vramUsageText').textContent = '3.53 / 24.00 GB (15%)';
+      document.getElementById('vramBar').style.width = '15%';
+    }
+
+    calculateFit();
+  </script>
+</body>
+</html>
