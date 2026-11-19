@@ -8,6 +8,7 @@
 <p align="center">
   <a href="https://github.com/1nsharma-labs/vramarmor/actions"><img src="https://img.shields.io/badge/build-passing-brightgreen.svg" alt="Build Status"></a>
   <a href="https://www.npmjs.com/package/vramarmor"><img src="https://img.shields.io/badge/npm-v1.0.0-blue.svg" alt="npm version"></a>
+  <a href="https://m8ven.ai/mcp/1nsharma-labs/vramarmor"><img src="https://m8ven.ai/badge/mcp/1nsharma-labs/vramarmor" alt="M8ven Trust"></a>
   <a href="https://github.com/1nsharma-labs/vramarmor/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-green.svg" alt="License"></a>
   <a href="https://1nsharma-labs.github.io/vramarmor/"><img src="https://img.shields.io/badge/Live_Demo-VRAM_Calculator-orange.svg" alt="Live Demo"></a>
   <a href="https://polar.sh/1nsharma-labs"><img src="https://img.shields.io/badge/Sponsor-Polar.sh-purple.svg" alt="Sponsor"></a>
